@@ -18,6 +18,7 @@ const express = require('express');
 const request = require('request-promise-native');
 const cors = require('cors');
 const { promisify } = require('util');
+const dns = require('dns');
 
 const workCache = [];
 let getCache, putCache;
@@ -133,6 +134,25 @@ app.post('/api/node-api', async (req, res) => {
       res.json(proxyRes)
     })
     .catch(err => res.status(500).json(err.toString()));
+});
+
+app.post('/api/opencap', async (req, res) => {
+  // check if we got a domain
+  if(!req.body.domain){
+    return res.status(500).json({error: 'No domain provided'})
+  }
+  
+  // try to resolve the OpenCAP domain
+  dns.resolveSrv('_opencap._tcp.' + req.body.domain, (err, address, family) => {
+
+    // return error if nothing is found
+    if(err) return res.json({error: 'Not found', data: err});
+
+    // you can have multiple addresses, return just the first
+    if(address.length > 0){
+      res.json({host: address[0].name})
+    }
+  })
 });
 
 app.listen(listeningPort, () => console.log(`App listening on port ${listeningPort}!`));
